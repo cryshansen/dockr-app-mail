@@ -1,0 +1,19 @@
+version: '3.8'
+services:
+  app:
+    build: .
+    container_name: dockr-app-mail
+    ports:
+      - "9090:8080"
+    environment:
+      SPRING_MAIL_HOST: mailhog
+      SPRING_MAIL_PORT: 1025
+    depends_on:
+      - mailhog
+
+  mailhog:
+    image: mailhog/mailhog
+    container_name: dockr-mailhog
+    ports:
+      - "1025:1025"
+      - "8025:8025"

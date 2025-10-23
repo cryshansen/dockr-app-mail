@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Spring Boot + Docker + MailHog DevOps Walkthrough</title>
+  <style>
+    body {
+      font-family: "Segoe UI", Arial, sans-serif;
+      background: #f5f7fa;
+      color: #333;
+      line-height: 1.6;
+      margin: 0;
+      padding: 2rem;
+    }
+    h1, h2 {
+      color: #1f3b4d;
+    }
+    section {
+      background: white;
+      padding: 1.5rem 2rem;
+      border-radius: 12px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+      margin-bottom: 2rem;
+    }
+    pre {
+      background: #282c34;
+      color: #f8f8f2;
+      padding: 1rem;
+      border-radius: 8px;
+      overflow-x: auto;
+      position: relative;
+    }
+    code {
+      font-family: "Fira Code", monospace;
+    }
+    button.copy-btn {
+      position: absolute;
+      top: 8px;
+      right: 8px;
+      background: #4CAF50;
+      color: white;
+      border: none;
+      padding: 4px 10px;
+      border-radius: 5px;
+      cursor: pointer;
+      font-size: 0.8rem;
+    }
+    button.copy-btn:hover {
+      background: #45a049;
+    }
+  </style>
+</head>
+<body>
+  <h1>🚀 Spring Boot + Docker + MailHog DevOps Setup</h1>
+  <p>This guide walks you through creating a minimal <strong>Spring Boot</strong> application, containerizing it with <strong>Docker</strong>, integrating <strong>MailHog</strong> for email testing, and preparing it for <strong>GitHub Actions CI/CD</strong>.</p>
+
+  <section>
+    <h2>Step 1 — Create the Project Structure</h2>
+    <p>Clone your GitHub repo and create a simple Spring Boot app:</p>
+    <pre><button class="copy-btn" onclick="copyCode(this)">Copy</button><code>git clone https://github.com/cryshansen/dockr-app-mail.git
+cd dockr-app-mail
+mkdir -p src/main/java/com/example/dockrappmail/controller
+mkdir -p src/test/java/com/example/dockrappmail</code></pre>
+  </section>
+
+  <section>
+    <h2>Step 2 — Create the Controller</h2>
+    <p>Create <code>HelloController.java</code> inside <code>src/main/java/com/example/dockrappmail/controller</code>:</p>
+    <pre><button class="copy-btn" onclick="copyCode(this)">Copy</button><code>package com.example.dockrappmail.controller;
+
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RestController;
+
+@RestController
+public class HelloController {
+    @GetMapping("/hello")
+    public String hello() {
+        return "Hello from Docker + MailHog setup!";
+    }
+}</code></pre>
+  </section>
+
+  <section>
+    <h2>Step 3 — Add the Application Class</h2>
+    <p>Create <code>DockrAppMailApplication.java</code> in <code>src/main/java/com/example/dockrappmail/</code>:</p>
+    <pre><button class="copy-btn" onclick="copyCode(this)">Copy</button><code>package com.example.dockrappmail;
+
+import org.springframework.boot.SpringApplication;
+import org.springframework.boot.autoconfigure.SpringBootApplication;
+
+@SpringBootApplication
+public class DockrAppMailApplication {
+    public static void main(String[] args) {
+        SpringApplication.run(DockrAppMailApplication.class, args);
+    }
+}</code></pre>
+  </section>
+
+  <section>
+    <h2>Step 4 — Add a Simple Test</h2>
+    <p>Create <code>HelloControllerTest.java</code> in <code>src/test/java/com/example/dockrappmail/</code>:</p>
+    <pre><button class="copy-btn" onclick="copyCode(this)">Copy</button><code>package com.example.dockrappmail;
+
+import org.junit.jupiter.api.Test;
+import org.springframework.boot.test.context.SpringBootTest;
+
+@SpringBootTest
+class HelloControllerTest {
+    @Test
+    void contextLoads() {
+        // ensures Spring context loads successfully
+    }
+}</code></pre>
+  </section>
+
+  <section>
+    <h2>Step 5 — Add Docker Files</h2>
+    <p>First, create the files:</p>
+    <pre><button class="copy-btn" onclick="copyCode(this)">Copy</button><code>touch Dockerfile
+touch docker-compose.yml</code></pre>
+
+    <h3>🧱 Dockerfile</h3>
+    <pre><button class="copy-btn" onclick="copyCode(this)">Copy</button><code>FROM eclipse-temurin:21-jdk
+WORKDIR /app
+COPY . .
+RUN ./mvnw clean package -DskipTests || mvn clean package -DskipTests
+CMD ["java", "-jar", "target/dockr-app-mail-0.0.1-SNAPSHOT.jar"]</code></pre>
+
+    <h3>🧩 docker-compose.yml</h3>
+    <pre><button class="copy-btn" onclick="copyCode(this)">Copy</button><code>version: '3.8'
+services:
+  app:
+    build: .
+    container_name: dockr-app-mail
+    ports:
+      - "8080:8080"
+    environment:
+      SPRING_MAIL_HOST: mailhog
+      SPRING_MAIL_PORT: 1025
+    depends_on:
+      - mailhog
+
+  mailhog:
+    image: mailhog/mailhog
+    container_name: dockr-mailhog
+    ports:
+      - "1025:1025"
+      - "8025:8025"</code></pre>
+  </section>
+
+  <section>
+    <h2>Step 6 — Build and Run</h2>
+    <p>Now start everything locally:</p>
+    <pre><button class="copy-btn" onclick="copyCode(this)">Copy</button><code>docker compose up --build</code></pre>
+    <p>Access the app and MailHog:</p>
+    <ul>
+      <li>App → <a href="http://localhost:8080/hello" target="_blank">http://localhost:8080/hello</a></li>
+      <li>MailHog UI → <a href="http://localhost:8025" target="_blank">http://localhost:8025</a></li>
+    </ul>
+  </section>
+
+  <section>
+    <h2>Step 7 — Commit and Push</h2>
+    <p>Finally, push your setup to GitHub:</p>
+    <pre><button class="copy-btn" onclick="copyCode(this)">Copy</button><code>git add .
+git commit -m "Initial Docker + MailHog setup"
+git push origin main</code></pre>
+  </section>
+    <section>
+    <h2>Step 8 — Add GitHub Actions Workflow</h2>
+    <p>Create a file at <code>.github/workflows/docker-build.yml</code> to automatically build and test the app inside Docker whenever you push code.</p>
+
+    <pre><button class="copy-btn" onclick="copyCode(this)">Copy</button><code>name: Docker Build &amp; Test
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          java-version: "21"
+          distribution: "temurin"
+
+      - name: Build with Maven
+        run: mvn -B clean package -DskipTests
+
+      - name: Build Docker image
+        run: docker build -t dockr-app-mail .
+
+      - name: Start containers
+        run: docker compose up -d
+
+      - name: Verify app is running
+        run: |
+          sleep 10
+          curl -f http://localhost:8080/hello
+</code></pre>
+
+    <p>This workflow will:</p>
+    <ul>
+      <li>Check out your code</li>
+      <li>Set up JDK 21</li>
+      <li>Run <code>mvn clean package</code></li>
+      <li>Build and start Docker containers</li>
+      <li>Verify that the <code>/hello</code> endpoint responds</li>
+    </ul>
+  </section>
+  
+
+  <section>
+    <h2>Next Steps</h2>
+    <p>In GitHub, add a workflow under <code>.github/workflows/docker-build.yml</code> to automate builds and tests in Actions. You can then expand it to send and verify test emails via MailHog.</p>
+  </section>
+
+  <script>
+    function copyCode(button) {
+      const code = button.nextElementSibling.innerText;
+      navigator.clipboard.writeText(code).then(() => {
+        button.innerText = "Copied!";
+        setTimeout(() => button.innerText = "Copy", 2000);
+      });
+    }
+  </script>
+</body>
+</html>
