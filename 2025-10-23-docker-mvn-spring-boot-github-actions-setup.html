@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Docker & GitHub Actions: Java 21 Spring Boot Setup</title>
+<style>
+body { font-family: Arial, sans-serif; line-height: 1.6; margin: 2rem; }
+pre { background: #f4f4f4; padding: 1rem; overflow-x: auto; }
+code { background: #f4f4f4; padding: 2px 4px; }
+h1, h2, h3 { color: #333; }
+.copy-btn { background: #007acc; color: white; border: none; padding: 2px 6px; cursor: pointer; margin-left: 5px; border-radius: 3px; }
+.copy-btn:hover { background: #005ea3; }
+</style>
+<script>
+function copyCode(id) {
+  const code = document.getElementById(id);
+  navigator.clipboard.writeText(code.innerText).then(() => {
+    alert('Code copied!');
+  });
+}
+</script>
+</head>
+<body>
+
+<h1>🚀 Docker & GitHub Actions Setup for Java 21 Spring Boot</h1>
+<p><strong>Date:</strong> 2025-10-23<br>
+<strong>Author:</strong> Crystal Hansen</p>
+
+<h2>Introduction</h2>
+<p>In this tutorial, we’ll walk through how to set up a minimal Spring Boot application with Java 21 using Docker, Mailhog, and GitHub Actions. We also cover the fix for the Maven compiler plugin error when using Java 21.</p>
+
+<hr>
+
+<h2>🔧 Step 1: Fix Java 21 in Maven</h2>
+<p>Update your <code>pom.xml</code> to use a compatible <code>maven-compiler-plugin</code>:</p>
+
+<pre id="pomFix">
+&lt;build&gt;
+  &lt;plugins&gt;
+    &lt;plugin&gt;
+      &lt;groupId&gt;org.apache.maven.plugins&lt;/groupId&gt;
+      &lt;artifactId&gt;maven-compiler-plugin&lt;/artifactId&gt;
+      &lt;version&gt;3.11.0&lt;/version&gt; &lt;!-- supports Java 21 --&gt;
+      &lt;configuration&gt;
+        &lt;source&gt;21&lt;/source&gt;
+        &lt;target&gt;21&lt;/target&gt;
+        &lt;release&gt;21&lt;/release&gt;
+      &lt;/configuration&gt;
+    &lt;/plugin&gt;
+    &lt;plugin&gt;
+      &lt;groupId&gt;org.springframework.boot&lt;/groupId&gt;
+      &lt;artifactId&gt;spring-boot-maven-plugin&lt;/artifactId&gt;
+    &lt;/plugin&gt;
+  &lt;/plugins&gt;
+&lt;/build&gt;
+</pre>
+<button class="copy-btn" onclick="copyCode('pomFix')">Copy</button>
+
+<hr>
+
+<h2>📦 Step 2: Create Dockerfile</h2>
+<p>Create a <code>Dockerfile</code> in your project root:</p>
+
+<pre id="dockerfile">
+FROM eclipse-temurin:21-jdk-jammy
+WORKDIR /app
+COPY . .
+
+# Build with Maven wrapper, fallback to system Maven
+RUN ./mvnw clean package -DskipTests || mvn clean package -DskipTests
+
+CMD ["java", "-jar", "target/dockr-app-mail-0.0.1-SNAPSHOT.jar"]
+</pre>
+<button class="copy-btn" onclick="copyCode('dockerfile')">Copy</button>
+
+<hr>
+
+<h2>🧩 Step 3: Docker Compose for Mailhog</h2>
+<p>Create <code>docker-compose.yml</code> to run Mailhog alongside your app:</p>
+
+<pre id="dockerCompose">
+version: '3.8'
+services:
+  mailhog:
+    image: mailhog/mailhog
+    ports:
+      - "1025:1025"  # SMTP
+      - "8025:8025"  # Web UI
+
+  app:
+    build: .
+    ports:
+      - "8080:8080"
+    depends_on:
+      - mailhog
+</pre>
+<button class="copy-btn" onclick="copyCode('dockerCompose')">Copy</button>
+
+<hr>
+
+<h2>⚙️ Step 4: GitHub Actions Workflow</h2>
+<p>Create <code>.github/workflows/docker-ci.yml</code> to build and test your Dockerized Spring Boot app:</p>
+
+<pre id="githubActions">
+name: Docker CI
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: 'temurin'
+          cache: maven
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build Docker image
+        run: docker build -t dockr-app-mail:ci .
+
+      - name: Start Mailhog
+        run: docker run -d -p 1025:1025 -p 8025:8025 mailhog/mailhog
+
+      - name: Run Spring Boot app
+        run: docker run -d -p 8080:8080 dockr-app-mail:ci
+
+      - name: Wait for Spring Boot
+        run: |
+          for i in {1..15}; do
+            curl -s http://localhost:8080/hello && break
+            echo "Waiting..."
+            sleep 2
+          done
+
+      - name: Run Tests
+        run: docker exec $(docker ps -q -f ancestor=dockr-app-mail:ci) ./mvnw test || mvn test
+</pre>
+<button class="copy-btn" onclick="copyCode('githubActions')">Copy</button>
+
+<hr>
+
+<h2>✅ Step 5: Push to GitHub</h2>
+<pre id="gitPush">
+git add .
+git commit -m "Add Docker & GitHub Actions workflow"
+git push origin main
+</pre>
+<button class="copy-btn" onclick="copyCode('gitPush')">Copy</button>
+
+<hr>
+
+<h2>🎯 Conclusion</h2>
+<p>This setup ensures:</p>
+<ul>
+<li>Java 21 compatibility for Spring Boot and Maven</li>
+<li>Dockerized app + Mailhog for email testing</li>
+<li>CI workflow via GitHub Actions that builds, runs, and tests your app</li>
+</ul>
+<p>Now your portfolio shows a **complete DevOps workflow**, from fixing Maven errors to testing your Spring Boot app in a containerized environment!</p>
+
+</body>
+</html>
